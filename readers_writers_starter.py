@@ -37,10 +37,10 @@ class ReadersWritersMonitor:
     def __init__(self) -> None:
         self.lock = threading.Lock()
         self.condition = threading.Condition(self.lock)
-
-        self.active_readers = 0
-        self.active_writers = 0
-        self.waiting_writers = 0
+        #共享状态计数器
+        self.active_readers = 0 #当前正在读的读者数
+        self.active_writers = 0 #当前正在写的写者数
+        self.waiting_writers = 0 #等待的写者数
 
     def start_read(self, reader_id: int) -> None:
         """
@@ -55,7 +55,16 @@ class ReadersWritersMonitor:
         """
         with self.condition:
             # TODO: Replace 'pass' with your logic
-            pass
+            #1.用while循环等待：必须重新检查条件（作业要求禁止使用if）
+            while self.active_writers>0;
+                print(f"Reader{reader_id} is waiting to read(writer active)")
+                self.condition.wait()#释放锁，等待唤醒
+            #2.无写者，读者数+1
+            self.active_readers+=1
+            #3.打印符合要求的日志
+            print（f"Reader{reader_id} starts reading.Active readers={self.active_readers}"）
+            #4.唤醒其他等待的读者（支持多个读者同时读）
+            self.condition.notify_all()
 
     def end_read(self, reader_id: int) -> None:
         """
@@ -68,7 +77,13 @@ class ReadersWritersMonitor:
         """
         with self.condition:
             # TODO: Replace 'pass' with your logic
-            pass
+            #1.读者数-1
+            self.active_readers-=1
+            #2.打印日志
+            print(f"Reader{reader_id} stops reading.Active reaers={self.active_readers}")
+            #3.如果是最后一个读者，唤醒等待的写者
+            if self.active_readers==0:
+                self.condition.notify_all()
 
     def start_write(self, writer_id: int) -> None:
         """
@@ -83,7 +98,12 @@ class ReadersWritersMonitor:
         """
         with self.condition:
             # TODO: Replace 'pass' with your logic
-            pass
+            #1.可选：增加等待写者计数
+            self.waiting_writer+=1
+            #2.用while循环等待：有读者或有写者时，必须等待
+            while self.active_readers>0 or self.active_writers>0:
+                print(f"Writer{writer_id} is waiting to write(readers/writers active)")
+                self.condition.wait()
 
     def end_write(self, writer_id: int) -> None:
         """
@@ -96,8 +116,12 @@ class ReadersWritersMonitor:
         """
         with self.condition:
             # TODO: Replace 'pass' with your logic
-            pass
-
+            #1.写者数-1（重置为0）
+            self.active_writers=0
+            #2.打印日志
+            print(f"Writer{writer_id} stops writing")
+            #3.唤醒所有等待线程：优先唤醒读者
+            self.condition.notify_all()
 
 # Donot Change this
 class Reader(threading.Thread):
@@ -153,27 +177,35 @@ def main() -> None:
     - Join all threads.
     - Print a final message when the simulation is complete.
     """
-    random.seed(42)
+    random.seed(42)#固定随机种子，方便复现结果
 
     monitor = ReadersWritersMonitor()
 
     # TODO: Create at least 3 Reader threads.
     readers = [
-        Reader(reader_id=1, monitor=monitor)
+        Reader(reader_id=1, monitor=monitor),
+        Reader(reader_id=2, monitor=monitor),
+        Reader(reader_id=3, monitor=monitor)
     ]
 
     # TODO: Create at least 2 writer threads.
     writers = [
-        Writer(writer_id=1, monitor=monitor)
+        Writer(writer_id=1, monitor=monitor),
+        Writer(writer_id=2, monitor=monitor)
     ]
 
     all_threads = readers + writers
 
     # TODO: Start all threads
+    for thread in all_threads:
+        thread.start()
 
     # TODO: Wait for all threads to finish
+    for thread in all_threads:
+        thread.join()
 
     # TODO: Print final message that simulation completed
+    print("\n All reader and writer threads have finished execution.Simulation complete!")
 
 
 if __name__ == "__main__":
