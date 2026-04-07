@@ -56,7 +56,7 @@ class ReadersWritersMonitor:
         with self.condition:
             # TODO: Replace 'pass' with your logic
             #1.用while循环等待：必须重新检查条件（作业要求禁止使用if）
-            while self.active_writers>0;
+            while self.active_writers>0:
                 print(f"Reader{reader_id} is waiting to read(writer active)")
                 self.condition.wait()#释放锁，等待唤醒
             #2.无写者，读者数+1
@@ -99,11 +99,15 @@ class ReadersWritersMonitor:
         with self.condition:
             # TODO: Replace 'pass' with your logic
             #1.可选：增加等待写者计数
-            self.waiting_writer+=1
+            self.waiting_writers+=1
             #2.用while循环等待：有读者或有写者时，必须等待
             while self.active_readers>0 or self.active_writers>0:
                 print(f"Writer{writer_id} is waiting to write(readers/writers active)")
                 self.condition.wait()
+                self.waiting_writers-=1
+                self.active_writers=1
+                print(f"Writer{writer_id} starts writing")
+                
 
     def end_write(self, writer_id: int) -> None:
         """
